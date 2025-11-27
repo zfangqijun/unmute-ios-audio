@@ -9,6 +9,10 @@
 [standard-image]: https://img.shields.io/badge/code_style-standard-brightgreen.svg
 [standard-url]: https://standardjs.com
 
+## v4
+- Fixed `WebKitAudioContext` undefined on iOS 17+  
+- Added `context`, `forceIos`, and `whenEvent` parameters  
+
 ### Enable/unmute WebAudio on iOS, even while mute switch is on
 
 On Safari for iOS, audio is allowed to play when the device's mute switch is enabled, but only for HTML5 audio tags, and not for Web Audio. This module fixes that and adds consistency and reliability to web audio in Safari. Note that a "user activation" in the form of a `click` or `touchstart` event is still required to play audio. This package merely unmutes Web Audio even while the mute switch is enabled on the device.
@@ -26,15 +30,34 @@ npm install unmute-ios-audio
 ## usage
 
 ```js
-const unmuteAudio = require('unmute-ios-audio')
+import { unmuteIosAudio } from '@wado/unmute-ios-audio'
 
 // Call once, as early as possible in the page lifecycle
-unmuteAudio()
+unmuteAudio({ context })
 ```
 
 ## API
 
-### `unmuteAudio()`
+### `unmuteAudio({ context: AudioContext; forceIos?: boolean; whenEvent?: boolean; })`
+
+```
+interface UnmuteIosAudioOptions {
+    /**
+     * reuse your context reference
+     */
+    context: AudioContext;
+    /**
+     * override internal ios detection    
+     * default: false
+     */
+    forceIos?: boolean;
+    /**
+     * run when user triggers an event
+     * default: true
+     */
+    whenEvent?: boolean;
+}
+```
 
 Enable/unmute the WebAudio API on iOS, even while the mute switch is on.
 

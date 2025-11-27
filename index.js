@@ -1,25 +1,19 @@
-/*! unmute-ios-audio. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> */
-module.exports = unmuteIosAudio
+export function unmuteIosAudio({ context, forceIos = false, whenEvent = true }) {
+  const USER_ACTIVATION_EVENTS = [
+    'auxclick',
+    'click',
+    'contextmenu',
+    'dblclick',
+    'keydown',
+    'keyup',
+    'mousedown',
+    'mouseup',
+    'touchend'
+  ]
 
-const USER_ACTIVATION_EVENTS = [
-  'auxclick',
-  'click',
-  'contextmenu',
-  'dblclick',
-  'keydown',
-  'keyup',
-  'mousedown',
-  'mouseup',
-  'touchend'
-]
-
-function unmuteIosAudio () {
-  const AudioContext = window.webkitAudioContext
-
+  const ua = navigator.userAgent.toLowerCase();
   // To detect iOS, check for touch device and confirm Safari-only
-  // webkitAudioContext is present.
-  const isIos = navigator.maxTouchPoints > 0 && AudioContext != null
-
+  const isIos = forceIos || (ua.indexOf('ipad') > -1 || ua.indexOf('iphone') > -1)
   if (!isIos) return
 
   // state can be 'blocked', 'pending', 'allowed'
@@ -27,20 +21,24 @@ function unmuteIosAudio () {
   let webAudioState = 'blocked'
 
   let audio
-  let context
   let source
 
-  const sampleRate = (new AudioContext()).sampleRate
+  const sampleRate = context.sampleRate
   const silentAudioFile = createSilentAudioFile(sampleRate)
 
-  USER_ACTIVATION_EVENTS.forEach(eventName => {
-    window.addEventListener(
-      eventName, handleUserActivation, { capture: true, passive: true }
-    )
-  })
+  if (whenEvent) {
+    USER_ACTIVATION_EVENTS.forEach(eventName => {
+      window.addEventListener(
+        eventName, handleUserActivation, { capture: true, passive: true }
+      )
+    })
+  } else {
+    handleUserActivation()
+  }
+
 
   // Return a seven samples long 8 bit mono WAVE file
-  function createSilentAudioFile (sampleRate) {
+  function createSilentAudioFile(sampleRate) {
     const arrayBuffer = new ArrayBuffer(10)
     const dataView = new DataView(arrayBuffer)
 
@@ -55,7 +53,7 @@ function unmuteIosAudio () {
     return `data:audio/wav;base64,UklGRisAAABXQVZFZm10IBAAAAABAAEA${missingCharacters}AgAZGF0YQcAAACAgICAgICAAAA=`
   }
 
-  function handleUserActivation (e) {
+  function handleUserActivation(e) {
     if (htmlAudioState === 'blocked') {
       htmlAudioState = 'pending'
       createHtmlAudio()
@@ -66,7 +64,7 @@ function unmuteIosAudio () {
     }
   }
 
-  function createHtmlAudio () {
+  function createHtmlAudio() {
     audio = document.createElement('audio')
 
     audio.setAttribute('x-webkit-airplay', 'deny') // Disable the iOS control center media widget
@@ -91,9 +89,7 @@ function unmuteIosAudio () {
     )
   }
 
-  function createWebAudio () {
-    context = new AudioContext()
-
+  function createWebAudio() {
     source = context.createBufferSource()
     source.buffer = context.createBuffer(1, 1, 22050) // .045 msec of silence
     source.connect(context.destination)
@@ -107,19 +103,18 @@ function unmuteIosAudio () {
 
       source.disconnect(context.destination)
       source = null
-
-      context.close()
-      context = null
     }
   }
 
-  function maybeCleanup () {
+  function maybeCleanup() {
     if (htmlAudioState !== 'allowed' || webAudioState !== 'allowed') return
 
-    USER_ACTIVATION_EVENTS.forEach(eventName => {
-      window.removeEventListener(
-        eventName, handleUserActivation, { capture: true, passive: true }
-      )
-    })
+    if (whenEvent) {
+      USER_ACTIVATION_EVENTS.forEach(eventName => {
+        window.removeEventListener(
+          eventName, handleUserActivation, { capture: true, passive: true }
+        )
+      })
+    }
   }
 }
